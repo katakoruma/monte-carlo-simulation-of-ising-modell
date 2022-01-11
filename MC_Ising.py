@@ -8,6 +8,7 @@ Created on Mon Jan 10 13:12:02 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 class MCI:
@@ -149,13 +150,13 @@ class MCI:
 
         return cv
 
-    def plot(self, M_Abs, chi_Abs, u_Abs, cv_Abs):
+    def plot(self, M, chi, u, cv):
         """
         Error plot of magnetization, susceptibility, energy and heat capacity per spin
         """
 
         plt.figure()
-        plt.errorbar(self.temperatures,np.mean(M_Abs,1),yerr=np.std(M_Abs,1),ecolor='red')
+        plt.errorbar(self.temperatures,np.mean(M,1),yerr=np.std(M,1),ecolor='red')
         ax = plt.subplot()
         plt.xlabel('Temperatures J/K')
         plt.ylabel('M(T)')
@@ -165,7 +166,7 @@ class MCI:
         plt.show()
 
         plt.figure()
-        plt.errorbar(self.temperatures,np.mean(chi_Abs,1),yerr=np.std(chi_Abs,1),ecolor='red')
+        plt.errorbar(self.temperatures,np.mean(chi,1),yerr=np.std(chi,1),ecolor='red')
         ax = plt.subplot()
         plt.xlabel('Temperatures J/K')
         plt.ylabel('Chi(T)')
@@ -175,7 +176,7 @@ class MCI:
         plt.show()
 
         plt.figure()
-        plt.errorbar(self.temperatures,np.mean(u_Abs,1),yerr=np.std(u_Abs,1),ecolor='red')
+        plt.errorbar(self.temperatures,np.mean(u,1),yerr=np.std(u,1),ecolor='red')
         ax = plt.subplot()
         plt.xlabel('Temperatures J/K')
         plt.ylabel('U(T)')
@@ -185,7 +186,7 @@ class MCI:
         plt.show()
 
         plt.figure()
-        plt.errorbar(self.temperatures[0:-1],np.mean(cv_Abs,1),yerr=np.std(cv_Abs,1),ecolor='red')
+        plt.errorbar(self.temperatures[0:-1],np.mean(cv,1),yerr=np.std(cv,1),ecolor='red')
         ax = plt.subplot()
         plt.xlabel('Temperatures J/K')
         plt.ylabel('cv(T)')
@@ -200,15 +201,15 @@ class MCI:
     def mainloop_lin(self):
         """
         Iteration loop without parallelization.
-        Used in
+        Used in this script
         """
 
 
         # Setze container fuer die Messgroessen zur Abspeicherung auf
-        M_Abs = np.ones((len(self.temperatures), self.N_realis))   # Magnetisierung
-        chi_Abs = np.ones((len(self.temperatures), self.N_realis))
-        u_Abs = np.ones((len(self.temperatures), self.N_realis))
-        cv_Abs = np.ones((len(self.temperatures), self.N_realis))
+        M = np.ones((len(self.temperatures), self.N_realis))   # Magnetisierung
+        chi = np.ones((len(self.temperatures), self.N_realis))
+        u = np.ones((len(self.temperatures), self.N_realis))
+        cv = np.ones((len(self.temperatures), self.N_realis))
 
         # Iteriere druch temperatures
         for T_ind in range(self.T_num):
@@ -216,13 +217,11 @@ class MCI:
              # Setze Temperatur
              T = self.temperatures[T_ind]
 
-             # Als Orientierung fue die Laufzeit
-             print("Wir befinden uns bei Temperatur {:.1f}".format(T))
+             print("Current temperature: {:.1f}".format(T))
 
              # Erstelle mehrere Realisierungen für eine Temperatur um ungünstige Start
              # configurationen, welche schlecht thermalisieren aufzufangen
 
-             M,chi,u,cv = [],[],[],[]
 
              for realis in range(self.N_realis):
 
@@ -255,19 +254,19 @@ class MCI:
                      chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
                      u_realis[MC_iter] = self.energy(state)
 
-             M_Abs[T_ind, realis] = np.mean(np.abs(M_realis))
-             chi_Abs[T_ind, realis] = np.mean(chi_realis)
-             u_Abs[T_ind, realis] = np.mean(u_realis)
+             M[T_ind, realis] = np.mean(np.abs(M_realis))
+             chi[T_ind, realis] = np.mean(chi_realis)
+             u[T_ind, realis] = np.mean(u_realis)
 
-             cv_Abs[T_ind, realis] = self.heat_capacity(u_Abs[T_ind-1, realis],u_Abs[T_ind, realis])
+             cv[T_ind, realis] = self.heat_capacity(u[T_ind-1, realis],u[T_ind, realis])
 
 
-        return M_Abs, chi_Abs, u_Abs, cv_Abs
+        return M, chi, u, cv
 
     def mainloop_T(self, T_ind):
         """
         Iteration loop with parallelization of the different temperatures
-        Used in
+        Used in MC_Ising_Draft_parallel_Tnum
         """
 
         # Setze Temperatur
@@ -276,7 +275,7 @@ class MCI:
         # Erstelle mehrere Realisierungen für eine Temperatur um ungünstige Start
         # configurationen, welche schlecht thermalisieren aufzufangen
 
-        M,chi,u,cv = [],[],[],[]
+        M,chi,u = [],[],[]
 
         for realis in range(self.N_realis):
 
@@ -300,7 +299,7 @@ class MCI:
                 # Visualisierung (kann für den Algorithmus ignoriert werden)
                 if self.live_plotten:
                     self.ax.clear()
-                    self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
+                    self.ax.set_title("MC steps for T={:.1f} and B={}".format(T,self.B))
                     self.ax.imshow(state, cmap = self.colorm)
                     plt.pause(0.01)
 
@@ -318,7 +317,7 @@ class MCI:
     def mainloop_N_realis(self, realis, T):
         """
         Iteration loop with parallelization of the different realizations per temperature
-        Used in
+        Used in MC_Ising_Draft_parallel_Nreal
         """
 
         # Initialisiere Messgroesse pro Realisierung
@@ -341,7 +340,7 @@ class MCI:
             # Visualisierung (kann für den Algorithmus ignoriert werden)
             if self.live_plotten:
                 self.ax.clear()
-                self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
+                self.ax.set_title("MC steps for T={:.1f} and B={}".format(T,self.B))
                 self.ax.imshow(state, cmap = self.colorm)
                 plt.pause(0.01)
 
@@ -369,26 +368,27 @@ if __name__ == '__main__':
     colorm = 'seismic'
 
     # Size of sytem
-    N = 10    #edge length
+    N = 100    #edge length
 
     # Define temperatures in units of J/k
-    T_min = 1.5
+    T_min = 1.
     T_max = 10.5
-    T_num = 5
+    T_num = 1
 
     temperatures = np.linspace(T_min,T_max,T_num)
 
     # Define the number of realizations to a temperature
-    N_realis = 10
+    N_realis = 1
 
     # Define the number of thermalization steps
     N_therm = 100
 
     # Define the number of Monte Carlo updates to sample an equilibrium state.
-    N_MC = 100
+    N_MC = 50
 
     # external magnetic field
     B = 0
+
 
 
     np.random.seed(None)
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     mci = MCI(temperatures, N_realis, N_therm, N_MC, T_max, T_min, T_num, N, B, colorm, live_plotten)
 
     print('live_plotten: ',live_plotten,', plot: ', plot,', save: ', save)
-    print('N = ', N, ', num_cores = ',num_cores)
+    print('N = ', N)
     print('T_min = ', T_min, ', T_max = ', T_max, ', T_num = ', T_num)
     print('N_realis = ', N_realis, ', N_therm = ', N_therm, ', N_MC = ', N_MC)
 
