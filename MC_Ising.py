@@ -29,7 +29,7 @@ class MCI:
         if live_plotten:
             self.fig, self.ax = plt.subplots()
 
-    def initialisiere_Zustand(self):
+    def initialize_state(self):
         """
         Create a random N x N array of spins
         """
@@ -79,7 +79,7 @@ class MCI:
         return config
 
 
-    def thermalisiere_Zustand(self, config, temp):
+    def thermalize(self, config, temp):
         """
         Führe auf dem initialisierten Zustand Ther_Schritte mal das MC update
         durch um möglichst den initiierten random Zustand in den
@@ -93,14 +93,14 @@ class MCI:
             # Visualisierung (kann für den Algorithmus ignoriert werden)
             if self.live_plotten:
                 self.ax.clear()
-                self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(temp,self.B))
+                self.ax.set_title("MC steps for T={:.1f} and B={}".format(temp,self.B))
                 self.ax.imshow(config, cmap = self.colorm)
                 plt.pause(0.01)
 
         return config
 
 
-    def berechne_Magnetisierung(self, config):
+    def magnetization(self, config):
         """
         Calculate the magnetization per spin for the given configuration
         """
@@ -109,7 +109,7 @@ class MCI:
 
         return mag
 
-    def berechne_Suszeptibilitaet(self, mag):
+    def susceptibility(self, mag):
         """
         Calculate the susceptibility per spin for the given magnetization
         """
@@ -119,7 +119,7 @@ class MCI:
 
         return Susz
 
-    def berechne_Energie(self, config):
+    def energy(self, config):
         """
         Calculate the energy per spin for the given configuration
         """
@@ -137,7 +137,7 @@ class MCI:
 
         return E
 
-    def berechne_Waermekap(self, E1, E2):
+    def heat_capacity(self, E1, E2):
         """
         Calculation of heat capacity.
         """
@@ -149,7 +149,7 @@ class MCI:
 
         return cv
 
-    def plotten(self, M_Abs, chi_Abs, u_Abs, cv_Abs):
+    def plot(self, M_Abs, chi_Abs, u_Abs, cv_Abs):
         """
         Error plot of magnetization, susceptibility, energy and heat capacity per spin
         """
@@ -231,35 +231,35 @@ class MCI:
                  chi_realis = np.zeros(self.N_MC)
                  u_realis = np.zeros(self.N_MC)
 
-                 # Initialisiere spin zustand
-                 zustand = self.initialisiere_Zustand()
+                 # Initialisiere spin state
+                 state = self.initialize_state()
 
-                 # Bringe zustand in thermisches Gleichgewicht
-                 self.thermalisiere_Zustand(zustand, T)
+                 # Bringe state in thermisches Gleichgewicht
+                 self.thermalize(state, T)
 
                  # Sample durch Mikrozustände im Gleichgewicht
                  for MC_iter in range(self.N_MC):
 
                      # Update das Spin system in den nächsten Mikrozustand
-                     self.MC_metro_update(zustand, T)
+                     self.MC_metro_update(state, T)
 
                      # Visualisierung (kann für den Algorithmus ignoriert werden)
                      if self.live_plotten:
                          self.ax.clear()
                          self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
-                         self.ax.imshow(zustand, cmap = self.colorm)
+                         self.ax.imshow(state, cmap = self.colorm)
                          plt.pause(0.01)
 
                      # Speichere alle Mikrozustände dieser Realisierung
-                     M_realis[MC_iter] = self.berechne_Magnetisierung(zustand)
-                     chi_realis[MC_iter] = self.berechne_Suszeptibilitaet(M_realis[MC_iter])
-                     u_realis[MC_iter] = self.berechne_Energie(zustand)
+                     M_realis[MC_iter] = self.magnetization(state)
+                     chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
+                     u_realis[MC_iter] = self.energy(state)
 
              M_Abs[T_ind, realis] = np.mean(np.abs(M_realis))
              chi_Abs[T_ind, realis] = np.mean(chi_realis)
              u_Abs[T_ind, realis] = np.mean(u_realis)
 
-             cv_Abs[T_ind, realis] = self.berechne_Waermekap(u_Abs[T_ind-1, realis],u_Abs[T_ind, realis])
+             cv_Abs[T_ind, realis] = self.heat_capacity(u_Abs[T_ind-1, realis],u_Abs[T_ind, realis])
 
 
         return M_Abs, chi_Abs, u_Abs, cv_Abs
@@ -285,29 +285,29 @@ class MCI:
             chi_realis = np.zeros(self.N_MC)
             u_realis = np.zeros(self.N_MC)
 
-            # Initialisiere spin zustand
-            zustand = self.initialisiere_Zustand()
+            # Initialisiere spin state
+            state = self.initialize_state()
 
-            # Bringe zustand in thermisches Gleichgewicht
-            self.thermalisiere_Zustand(zustand, T)
+            # Bringe state in thermisches Gleichgewicht
+            self.thermalize(state, T)
 
             # Sample durch Mikrozustände im Gleichgewicht
             for MC_iter in range(self.N_MC):
 
                 # Update das Spin system in den nächsten Mikrozustand
-                self.MC_metro_update(zustand, T)
+                self.MC_metro_update(state, T)
 
                 # Visualisierung (kann für den Algorithmus ignoriert werden)
                 if self.live_plotten:
                     self.ax.clear()
                     self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
-                    self.ax.imshow(zustand, cmap = self.colorm)
+                    self.ax.imshow(state, cmap = self.colorm)
                     plt.pause(0.01)
 
                 # Speichere alle Mikrozustände dieser Realisierung
-                M_realis[MC_iter] = self.berechne_Magnetisierung(zustand)
-                chi_realis[MC_iter] = self.berechne_Suszeptibilitaet(M_realis[MC_iter])
-                u_realis[MC_iter] = self.berechne_Energie(zustand)
+                M_realis[MC_iter] = self.magnetization(state)
+                chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
+                u_realis[MC_iter] = self.energy(state)
 
             M.append(np.mean(np.abs(M_realis)))
             chi.append(np.mean(chi_realis))
@@ -326,32 +326,102 @@ class MCI:
         chi_realis = np.zeros(self.N_MC)
         u_realis = np.zeros(self.N_MC)
 
-        # Initialisiere spin zustand
-        zustand = self.initialisiere_Zustand()
+        # Initialisiere spin state
+        state = self.initialize_state()
 
-        # Bringe zustand in thermisches Gleichgewicht
-        self.thermalisiere_Zustand(zustand, T)
+        # Bringe state in thermisches Gleichgewicht
+        self.thermalize(state, T)
 
         # Sample durch Mikrozustände im Gleichgewicht
         for MC_iter in range(self.N_MC):
 
             # Update das Spin system in den nächsten Mikrozustand
-            self.MC_metro_update(zustand, T)
+            self.MC_metro_update(state, T)
 
             # Visualisierung (kann für den Algorithmus ignoriert werden)
             if self.live_plotten:
                 self.ax.clear()
                 self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
-                self.ax.imshow(zustand, cmap = self.colorm)
+                self.ax.imshow(state, cmap = self.colorm)
                 plt.pause(0.01)
 
             # Speichere alle Mikrozustände dieser Realisierung
-            M_realis[MC_iter] = self.berechne_Magnetisierung(zustand)
-            chi_realis[MC_iter] = self.berechne_Suszeptibilitaet(M_realis[MC_iter])
-            u_realis[MC_iter] = self.berechne_Energie(zustand)
+            M_realis[MC_iter] = self.magnetization(state)
+            chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
+            u_realis[MC_iter] = self.energy(state)
 
             M    = np.mean(np.abs(M_realis))
             chi  = np.mean(chi_realis)
             u    = np.mean(u_realis)
 
         return M, chi, u
+
+
+if __name__ == '__main__':
+
+    #basic configuration
+    jobid = 123             # tag for saved files, gets replaced by jobid if SLURM job
+
+    live_plotten = True    # live plot of the spin configuration
+    plot = False            # create plots of magnetization, susceptibility, energy and heat capacity
+    save = False            # save numpy arrays
+
+    colorm = 'seismic'
+
+    # Size of sytem
+    N = 10    #edge length
+
+    # Define temperatures in units of J/k
+    T_min = 1.5
+    T_max = 10.5
+    T_num = 5
+
+    temperatures = np.linspace(T_min,T_max,T_num)
+
+    # Define the number of realizations to a temperature
+    N_realis = 10
+
+    # Define the number of thermalization steps
+    N_therm = 100
+
+    # Define the number of Monte Carlo updates to sample an equilibrium state.
+    N_MC = 100
+
+    # external magnetic field
+    B = 0
+
+
+    np.random.seed(None)
+
+    mci = MCI(temperatures, N_realis, N_therm, N_MC, T_max, T_min, T_num, N, B, colorm, live_plotten)
+
+    print('live_plotten: ',live_plotten,', plot: ', plot,', save: ', save)
+    print('N = ', N, ', num_cores = ',num_cores)
+    print('T_min = ', T_min, ', T_max = ', T_max, ', T_num = ', T_num)
+    print('N_realis = ', N_realis, ', N_therm = ', N_therm, ', N_MC = ', N_MC)
+
+
+    # Execute the Monte Carlo simulation for different temperatures
+    M, chi, u, cv = mci.mainloop_lin()
+
+    print('M:')
+    print(M)
+
+    print('chi:')
+    print(chi)
+
+    print('u:')
+    print(u)
+
+    print('cv:')
+    print(cv)
+
+
+    if save:
+
+        os.mkdir('data/{}'.format(jobid))
+
+        np.save('data/{}/M_{}'.format(jobid,jobid),M)
+        np.save('data/{}/chi_{}'.format(jobid,jobid),chi)
+        np.save('data/{}/u_{}'.format(jobid,jobid),u)
+     
