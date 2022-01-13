@@ -14,7 +14,7 @@ import os
 
 
 #basic configuration
-jobid = 123             # tag for saved files, gets replaced by jobid if SLURM job
+jobid = 42             # tag for saved files, gets replaced by jobid if SLURM job
 num_cores = 10          # number of workers, gets replaced by available cores if SLURM job
 
 live_plotten = False    # live plot of the spin configuration
@@ -49,6 +49,7 @@ if __name__ == '__main__':
 
     np.random.seed(None)
 
+    # check if SLURM job
     if 'SLURM_JOB_ID' in os.environ:
         jobid = os.environ['SLURM_JOB_ID']
 
@@ -60,18 +61,17 @@ if __name__ == '__main__':
 
     temperatures = np.linspace(T_min,T_max,T_num)
 
-    mci = MCI(temperatures, N_realis, N_therm, N_MC, T_max, T_min, T_num, N, B, colorm, live_plotten)
+    mci = MCI(temperatures, T_max, T_min, T_num, N, N_realis, N_therm, N_MC, B, colorm, live_plotten)
 
     print('live_plotten: ',live_plotten,', plot: ', plot,', save: ', save)
     print('N = ', N, ', num_cores = ',num_cores)
     print('T_min = ', T_min, ', T_max = ', T_max, ', T_num = ', T_num)
     print('N_realis = ', N_realis, ', N_therm = ', N_therm, ', N_MC = ', N_MC)
 
-    # Setze container fuer die Messgroessen zur Abspeicherung auf
-    M = np.ones((len(temperatures), N_realis))   # Magnetisierung
-    chi = np.ones((len(temperatures), N_realis))
-    u = np.ones((len(temperatures), N_realis))
-    cv = np.ones((len(temperatures), N_realis))
+    M = np.zeros((T_num, N_realis))
+    chi = np.zeros((T_num, N_realis))
+    u = np.zeros((T_num, N_realis))
+    cv = np.zeros((T_num, N_realis))
 
     # Execute the Monte Carlo simulation for different temperatures
     results = Parallel(n_jobs=num_cores)(delayed(mci.mainloop_T)(T_ind) for T_ind in range(T_num))
@@ -101,14 +101,7 @@ if __name__ == '__main__':
 
     if save:
 
-        os.mkdir('data/{}'.format(jobid))
-
-        np.save('data/{}/M_{}'.format(jobid,jobid),M)
-        np.save('data/{}/chi_{}'.format(jobid,jobid),chi)
-        np.save('data/{}/u_{}'.format(jobid,jobid),u)
-        np.save('data/{}/cv_{}'.format(jobid,jobid),cv)
-        np.save('data/{}/temp_{}'.format(jobid,jobid),temperatures)
-
+        mci.save_arrays(M, chi, u, cv, jobid = jobid)
 
     if plot:
 
