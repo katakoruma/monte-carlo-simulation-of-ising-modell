@@ -9,7 +9,7 @@ import numpy as np
 
 from MC_Ising import MCI
 
-jobid = 25028694
+jobid = 25043066
 
 
 # Definiere Systemgroesse
@@ -32,19 +32,19 @@ B = 0
 
 
 
-chi_Abs      =    np.load('data/{}/chi_{}.npy'.format(jobid,jobid))
-cv_Abs       =    np.load('data/{}/cv_{}.npy'.format(jobid,jobid))
-M_Abs        =    np.load('data/{}/M_{}.npy'.format(jobid,jobid))
-u_Abs        =    np.load('data/{}/u_{}.npy'.format(jobid,jobid))
-Temperaturen =    np.load('data/{}/temp_{}.npy'.format(jobid,jobid))
+chi           =    np.load('data/{}/chi_{}.npy'.format(jobid,jobid))
+cv            =    np.load('data/{}/cv_{}.npy'.format(jobid,jobid))
+M             =    np.load('data/{}/M_{}.npy'.format(jobid,jobid))
+u             =    np.load('data/{}/u_{}.npy'.format(jobid,jobid))
+temperatures  =    np.load('data/{}/temp_{}.npy'.format(jobid,jobid))
 
 
-T_Anzahl = len(Temperaturen)
-T_max    = max(Temperaturen)
-T_min    = min(Temperaturen)
+T_num    = len(temperatures)
+T_max    = max(temperatures)
+T_min    = min(temperatures)
 
 
-mci = MCI(Temperaturen, N_realis, N_therm, N_MC, T_max, T_min, T_Anzahl, N, B)
+mci = MCI(temperatures, T_max, T_min, T_num, N, N_realis, N_therm, N_MC, B)
 
 
-mci.plot(M_Abs, chi_Abs, u_Abs, cv_Abs)
+mci.plot(M, chi, u, cv)
