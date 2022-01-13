@@ -13,17 +13,20 @@ import os
 
 class MCI:
 
-    def __init__(self, temperatures, N_realis, N_therm, N_MC, T_max, T_min, T_num, N, B, colorm = 'seismic', live_plotten = False):
+    def __init__(self, temperatures, T_max, T_min, T_num, N, N_realis, N_therm, N_MC, B, colorm = 'seismic', live_plotten = False):
+        """
+        Defining class variables
+        """
 
-        self.temperatures   = temperatures
-        self.N_realis       = N_realis
-        self.N_therm        = N_therm
-        self.N_MC           = N_MC
+        self.temperatures   = temperatures          # array of all temperatures steps
         self.T_max          = T_max
         self.T_min          = T_min
-        self.T_num          = T_num
-        self.N              = N
-        self.B              = B
+        self.T_num          = T_num                 # number of temperatures to iterate over
+        self.N              = N                     # edge length of
+        self.N_realis       = N_realis              # number of realizations to a temperature
+        self.N_therm        = N_therm               # number of thermalization steps
+        self.N_MC           = N_MC                  # number of Monte Carlo updates to sample an equilibrium state.
+        self.B              = B                     # magnetic field
         self.colorm         = colorm
         self.live_plotten   = live_plotten
 
@@ -34,23 +37,20 @@ class MCI:
         """
         Create a random N x N array of spins
         """
-        #binäre Schreibweise mit 0 und 1, eignet sich genauso zur Charakterisierung
-        start_zustand = np.random.randint(0,2,size=((self.N,self.N)))
 
-        #skaliere um auf -1,1
-        start_zustand = -np.ones((self.N,self.N)) + 2 * start_zustand
+        state = np.random.randint(0,2,size=((self.N,self.N)))
 
-        return start_zustand
+        state = -np.ones((self.N,self.N)) + 2 * state
+
+        return state
 
 
     def MC_metro_update(self, config, temp):
         """
         Update of spin states with respect to temperature
         """
-        # Probiere Ordnung NxN Spin flips
         for flip in range(self.N*self.N):
 
-            # bestimme random Spin zum flippen
             x_s = np.random.randint(0,self.N)
             y_s = np.random.randint(0,self.N)
 
@@ -73,7 +73,6 @@ class MCI:
             else:
                 p = np.exp(-Delta_E / temp)
 
-           #Dummy update
             if np.random.rand() < p:
                 config[x_s,y_s] = - config[x_s,y_s]
 
@@ -82,11 +81,9 @@ class MCI:
 
     def thermalize(self, config, temp):
         """
-        Führe auf dem initialisierten Zustand Ther_Schritte mal das MC update
-        durch um möglichst den initiierten random Zustand in den
-        Gleichgewichtsszustand zu überführen
+        Configuration is updated N_therm times in order to get it to an equilibrium state
         """
-        for t_schritt in range(self.N_therm):
+        for step in range(self.N_therm):
 
             # Update das Spin system
             self.MC_metro_update(config, temp)
@@ -105,7 +102,6 @@ class MCI:
         """
         Calculate the magnetization per spin for the given configuration
         """
-        # Bestimme den Mittelwert der Spins des ganzen Gitters
         mag = np.mean(config)
 
         return mag
@@ -114,7 +110,6 @@ class MCI:
         """
         Calculate the susceptibility per spin for the given magnetization
         """
-        # Bestimme den Mittelwert der Spins des ganzen Gitters
 
         Susz = mag**2 * (self.N**2 - 1) / self.N**2
 
@@ -197,6 +192,23 @@ class MCI:
 
         return
 
+    def save_arrays(self,M,chi,u,cv, dict = 'data', jobid = 42):
+        """
+        Saving np arrays in .npy format at {dict}/{jobid}
+        """
+
+        if not os.path.isdir(dict):
+            os.mkdir(dict)
+
+        if not os.path.isdir(dict + '/' + str(jobid)):
+            os.mkdir(dict + '/' + str(jobid))
+
+        np.save('{}/{}/M_{}'.format(dict,jobid,jobid),M)
+        np.save('{}/{}/chi_{}'.format(dict,jobid,jobid),chi)
+        np.save('{}/{}/u_{}'.format(dict,jobid,jobid),u)
+        np.save('{}/{}/cv_{}'.format(dict,jobid,jobid),cv)
+        np.save('{}/{}/temp_{}'.format(dict,jobid,jobid),self.temperatures)
+
 
     def mainloop_lin(self):
         """
@@ -204,52 +216,38 @@ class MCI:
         Used in this script
         """
 
-
-        # Setze container fuer die Messgroessen zur Abspeicherung auf
-        M = np.ones((len(self.temperatures), self.N_realis))   # Magnetisierung
+        M = np.ones((len(self.temperatures), self.N_realis))
         chi = np.ones((len(self.temperatures), self.N_realis))
         u = np.ones((len(self.temperatures), self.N_realis))
         cv = np.ones((len(self.temperatures), self.N_realis))
 
-        # Iteriere druch temperatures
         for T_ind in range(self.T_num):
 
-             # Setze Temperatur
              T = self.temperatures[T_ind]
 
              print("Current temperature: {:.1f}".format(T))
 
-             # Erstelle mehrere Realisierungen für eine Temperatur um ungünstige Start
-             # configurationen, welche schlecht thermalisieren aufzufangen
-
-
              for realis in range(self.N_realis):
 
-                 # Initialisiere Messgroesse pro Realisierung
                  M_realis = np.zeros(self.N_MC)
                  chi_realis = np.zeros(self.N_MC)
                  u_realis = np.zeros(self.N_MC)
 
-                 # Initialisiere spin state
                  state = self.initialize_state()
 
-                 # Bringe state in thermisches Gleichgewicht
                  self.thermalize(state, T)
 
-                 # Sample durch Mikrozustände im Gleichgewicht
                  for MC_iter in range(self.N_MC):
 
-                     # Update das Spin system in den nächsten Mikrozustand
                      self.MC_metro_update(state, T)
 
-                     # Visualisierung (kann für den Algorithmus ignoriert werden)
+                    # ignore
                      if self.live_plotten:
                          self.ax.clear()
-                         self.ax.set_title("MC Schritte fuer T={:.1f} und B={}".format(T,self.B))
+                         self.ax.set_title("MC steps for T={:.1f} and B={}".format(T,self.B))
                          self.ax.imshow(state, cmap = self.colorm)
                          plt.pause(0.01)
 
-                     # Speichere alle Mikrozustände dieser Realisierung
                      M_realis[MC_iter] = self.magnetization(state)
                      chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
                      u_realis[MC_iter] = self.energy(state)
@@ -269,41 +267,30 @@ class MCI:
         Used in MC_Ising_Draft_parallel_Tnum
         """
 
-        # Setze Temperatur
         T = self.temperatures[T_ind]
-
-        # Erstelle mehrere Realisierungen für eine Temperatur um ungünstige Start
-        # configurationen, welche schlecht thermalisieren aufzufangen
 
         M,chi,u = [],[],[]
 
         for realis in range(self.N_realis):
 
-            # Initialisiere Messgroesse pro Realisierung
             M_realis = np.zeros(self.N_MC)
             chi_realis = np.zeros(self.N_MC)
             u_realis = np.zeros(self.N_MC)
 
-            # Initialisiere spin state
             state = self.initialize_state()
 
-            # Bringe state in thermisches Gleichgewicht
             self.thermalize(state, T)
 
-            # Sample durch Mikrozustände im Gleichgewicht
             for MC_iter in range(self.N_MC):
 
-                # Update das Spin system in den nächsten Mikrozustand
                 self.MC_metro_update(state, T)
 
-                # Visualisierung (kann für den Algorithmus ignoriert werden)
                 if self.live_plotten:
                     self.ax.clear()
                     self.ax.set_title("MC steps for T={:.1f} and B={}".format(T,self.B))
                     self.ax.imshow(state, cmap = self.colorm)
                     plt.pause(0.01)
 
-                # Speichere alle Mikrozustände dieser Realisierung
                 M_realis[MC_iter] = self.magnetization(state)
                 chi_realis[MC_iter] = self.susceptibility(M_realis[MC_iter])
                 u_realis[MC_iter] = self.energy(state)
@@ -320,24 +307,18 @@ class MCI:
         Used in MC_Ising_Draft_parallel_Nreal
         """
 
-        # Initialisiere Messgroesse pro Realisierung
         M_realis = np.zeros(self.N_MC)
         chi_realis = np.zeros(self.N_MC)
         u_realis = np.zeros(self.N_MC)
 
-        # Initialisiere spin state
         state = self.initialize_state()
 
-        # Bringe state in thermisches Gleichgewicht
         self.thermalize(state, T)
 
-        # Sample durch Mikrozustände im Gleichgewicht
         for MC_iter in range(self.N_MC):
 
-            # Update das Spin system in den nächsten Mikrozustand
             self.MC_metro_update(state, T)
 
-            # Visualisierung (kann für den Algorithmus ignoriert werden)
             if self.live_plotten:
                 self.ax.clear()
                 self.ax.set_title("MC steps for T={:.1f} and B={}".format(T,self.B))
@@ -361,7 +342,7 @@ if __name__ == '__main__':
     #basic configuration
     jobid = 123             # tag for saved files, gets replaced by jobid if SLURM job
 
-    live_plotten = True    # live plot of the spin configuration
+    live_plotten = True     # live plot of the spin configuration
     plot = False            # create plots of magnetization, susceptibility, energy and heat capacity
     save = False            # save numpy arrays
 
@@ -393,7 +374,7 @@ if __name__ == '__main__':
 
     np.random.seed(None)
 
-    mci = MCI(temperatures, N_realis, N_therm, N_MC, T_max, T_min, T_num, N, B, colorm, live_plotten)
+    mci = MCI(temperatures, T_max, T_min, T_num, N, N_realis, N_therm, N_MC, B)
 
     print('live_plotten: ',live_plotten,', plot: ', plot,', save: ', save)
     print('N = ', N)
@@ -419,9 +400,8 @@ if __name__ == '__main__':
 
     if save:
 
-        os.mkdir('data/{}'.format(jobid))
+        mci.save_arrays(M, chi, u, cv, jobid = jobid,)
 
-        np.save('data/{}/M_{}'.format(jobid,jobid),M)
-        np.save('data/{}/chi_{}'.format(jobid,jobid),chi)
-        np.save('data/{}/u_{}'.format(jobid,jobid),u)
-     
+    if plot:
+
+        mci.plot(M, chi, u, cv)
